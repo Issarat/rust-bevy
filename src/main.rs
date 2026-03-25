@@ -6,23 +6,20 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(Score::default())
-        .add_systems(
-            Startup,
-            (spawn_player, spawn_camera, spawn_enemies, spawn_star),
-        )
-        .add_systems(
-            Update,
-            (
-                player_movement,
-                confine_player_movement,
-                enemies_movement,
-                update_enemy_direction,
-                confine_enemy_movement,
-                enemy_hit_player,
-                player_hit_star,
-                update_score,
-            ),
-        )
+        //.insert_resource(StarSpawnTimer::default())
+        .add_systems(Startup, (spawn_player, spawn_camera, spawn_enemies, spawn_star))
+        .add_systems(Update, (
+            player_movement,
+            confine_player_movement,
+            enemies_movement,
+            update_enemy_direction,
+            confine_enemy_movement,
+            enemy_hit_player,
+            player_hit_star,
+            update_score,
+            //tick_star_spawn_timer,
+            spawn_stars_over_time,
+        ))
         .run();
 }
 
@@ -49,7 +46,7 @@ pub fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
 pub fn player_movement(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut player_query: Query<&mut Transform, With<Player>>,
-    time: Res<Time>,
+    time: Res<Time>
 ) {
     if let Ok(mut transform) = player_query.single_mut() {
         let mut direction = Vec3::ZERO;
@@ -77,7 +74,7 @@ pub fn player_movement(
 
 pub fn confine_player_movement(
     mut player_query: Query<&mut Transform, With<Player>>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
+    window_query: Query<&Window, With<PrimaryWindow>>
 ) {
     let Ok(window) = window_query.single() else {
         return;
@@ -95,13 +92,11 @@ pub fn player_hit_star(
     player_query: Query<&Transform, With<Player>>,
     mut star_query: Query<(Entity, &Transform), With<Star>>,
     asset_server: Res<AssetServer>,
-    mut score: ResMut<Score>,
+    mut score: ResMut<Score>
 ) {
     if let Ok(player_transform) = player_query.single() {
         for (stars_entity, stars_transform) in star_query.iter_mut() {
-            let distance = player_transform
-                .translation
-                .distance(stars_transform.translation);
+            let distance = player_transform.translation.distance(stars_transform.translation);
             let player_radius = player::SIZE / 2.0;
             let star_radius = stars::SIZE / 2.0;
             if distance < player_radius + star_radius {
@@ -130,7 +125,7 @@ pub mod enemies {
 pub fn spawn_enemies(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    asset_server: Res<AssetServer>,
+    asset_server: Res<AssetServer>
 ) {
     let Ok(window) = window_query.single() else {
         return;
@@ -157,7 +152,7 @@ pub fn update_enemy_direction(
     mut enemy_query: Query<(&mut Transform, &mut Enemy)>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     asset_server: Res<AssetServer>,
-    mut commands: Commands,
+    mut commands: Commands
 ) {
     let Ok(window) = window_query.single() else {
         return;
@@ -181,11 +176,7 @@ pub fn update_enemy_direction(
             let sound_effect_1 = asset_server.load("audio/pluck_001.ogg");
             let sound_effect_2 = asset_server.load("audio/pluck_002.ogg");
 
-            let sound_effect = if random::<f32>() > 0.5 {
-                sound_effect_1
-            } else {
-                sound_effect_2
-            };
+            let sound_effect = if random::<f32>() > 0.5 { sound_effect_1 } else { sound_effect_2 };
             commands.spawn(AudioPlayer::new(sound_effect));
         }
     }
@@ -193,7 +184,7 @@ pub fn update_enemy_direction(
 
 pub fn confine_enemy_movement(
     mut enemy_query: Query<(&mut Transform, &mut Enemy)>,
-    window_query: Query<&Window, With<PrimaryWindow>>,
+    window_query: Query<&Window, With<PrimaryWindow>>
 ) {
     let Ok(window) = window_query.single() else {
         return;
@@ -211,7 +202,7 @@ pub fn enemy_hit_player(
     mut commands: Commands,
     mut player_query: Query<(Entity, &Transform), With<Player>>,
     enemy_query: Query<&Transform, With<Enemy>>,
-    asset_server: Res<AssetServer>,
+    asset_server: Res<AssetServer>
 ) {
     if let Ok((player_entity, player_transform)) = player_query.single_mut() {
         for enemy in enemy_query.iter() {
@@ -228,18 +219,30 @@ pub fn enemy_hit_player(
 }
 
 //================================star service===========================================================
-#[derive(Component)]
-pub struct Star;
-
 pub mod stars {
     pub const COUNT: usize = 10;
     pub const SIZE: f32 = 30.0;
+    pub const TIME_SPAWNER: f32 = 1.0;
+    pub const MAX_COUNT: usize = 10;
 }
+
+#[derive(Component)]
+pub struct Star;
+
+// #[derive(Resource)]
+// pub struct StarSpawnTimer {
+//     pub timer: Timer,
+// }
+// impl Default for StarSpawnTimer {
+//     fn default() -> Self {
+//         Self { timer: Timer::from_seconds(stars::TIME_SPAWNER, TimerMode::Repeating) }
+//     }
+// }
 
 pub fn spawn_star(
     mut commands: Commands,
     window_query: Query<&Window, With<PrimaryWindow>>,
-    asset_server: Res<AssetServer>,
+    asset_server: Res<AssetServer>
 ) {
     let Ok(window) = window_query.single() else {
         return;
@@ -251,6 +254,34 @@ pub fn spawn_star(
             Star,
         )
     });
+}
+
+// pub fn tick_star_spawn_timer(mut star_spawn_timer: ResMut<StarSpawnTimer>, time: Res<Time>) {
+//     star_spawn_timer.timer.tick(time.delta());
+// }
+
+pub fn spawn_stars_over_time(
+    mut commands: Commands,
+    star_query: Query<Entity, With<Star>>,
+    //star_spawn_timer: Res<StarSpawnTimer>,
+    asset_server: Res<AssetServer>,
+    window_query: Query<&Window, With<PrimaryWindow>>
+) {
+    let stars = star_query.iter();
+    let star_is_max = stars.count() < stars::MAX_COUNT;
+    //if (star_spawn_timer.timer.just_finished() && star_is_max.clone()) || star_is_max {
+    if star_is_max {
+        let Ok(window) = window_query.single() else {
+            return;
+        };
+        spawn_sprites(&mut commands, window, 1, None, |x, y| {
+            (
+                Sprite::from_image(asset_server.load("sprites/star.png")),
+                Transform::from_xyz(x, y, 0.0),
+                Star,
+            )
+        });
+    }
 }
 
 //================================enemies service===========================================================
@@ -281,10 +312,7 @@ fn get_bounds(window: &Window, sprite_size: f32) -> (f32, f32, f32, f32) {
 }
 
 fn random_position(window: &Window) -> (f32, f32) {
-    (
-        (random::<f32>() - 0.5) * window.width(),
-        (random::<f32>() - 0.5) * window.height(),
-    )
+    ((random::<f32>() - 0.5) * window.width(), (random::<f32>() - 0.5) * window.height())
 }
 
 fn spawn_sprites<F, B>(
@@ -292,10 +320,9 @@ fn spawn_sprites<F, B>(
     window: &Window,
     count: usize,
     position: Option<(f32, f32)>,
-    mut bundle_fn: F,
-) where
-    B: Bundle,
-    F: FnMut(f32, f32) -> B,
+    mut bundle_fn: F
+)
+    where B: Bundle, F: FnMut(f32, f32) -> B
 {
     for _ in 0..count {
         let (x, y) = position.unwrap_or_else(|| random_position(window));
