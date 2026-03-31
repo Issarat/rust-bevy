@@ -33,8 +33,7 @@ const NORMAL_HOVER: Color = Color::srgb(0.3, 0.3, 0.3);
 const NORMAL_PRESSED: Color = Color::srgb(0.4, 0.4, 0.4);
 
 pub fn menu_plugin(app: &mut App) {
-    app.init_state::<AppState>()
-        .init_state::<MenuState>()
+    app.init_state::<MenuState>()
         .add_systems(OnEnter(AppState::Menu), menu_setup)
         .add_systems(OnEnter(MenuState::Main), main_menu::main_menu_setup)
         .add_systems(Update, (button_system, menu_action).run_if(in_state(AppState::Menu)));
@@ -83,7 +82,8 @@ fn menu_action(
         (Changed<Interaction>, With<Button>)
     >,
     mut app_exit_writer: MessageWriter<AppExit>,
-    mut menu_state: ResMut<NextState<MenuState>>
+    mut menu_state: ResMut<NextState<MenuState>>,
+    mut app_state: ResMut<NextState<AppState>>
 ) {
     for (interaction, menu_button_action) in &interaction_query {
         if *interaction == Interaction::Pressed {
@@ -92,7 +92,7 @@ fn menu_action(
                     app_exit_writer.write(AppExit::Success);
                 }
                 MenuButtonAction::Play => {
-                    menu_state.set(MenuState::Disabled);
+                    app_state.set(AppState::Game);
                 }
             }
         }
