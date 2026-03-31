@@ -21,8 +21,8 @@ fn setup(mut commands: Commands) {
 fn get_window_config() -> WindowPlugin {
     WindowPlugin {
         primary_window: Some(Window {
-            title: "My Isometric Sandbox".into(),
-            resolution: WindowResolution::new(1280.0 as u32, 720.0 as u32), // f32, not u32
+            title: "Bevy Game Ui".into(),
+            resolution: WindowResolution::new(1280, 720),
             resize_constraints: WindowResizeConstraints {
                 min_width: 800.0,
                 min_height: 600.0,
