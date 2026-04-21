@@ -1,9 +1,9 @@
 [package]
 name = "learn-bevy"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 bevy = "0.18"
-uuid = { version = "1.23", features = ["v4"] }
-rand = "0.10.0"
+rand = "0.10.1"
+uuid = { version = "1.23.1", features = ["v4"] }

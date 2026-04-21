@@ -1,35 +1,22 @@
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
-use std::marker::PhantomData;
-use uuid::Uuid;
 
+mod entities;
 mod camera;
 mod npc;
 mod world;
+mod ui;
 
+use entities::GameEntity;
 use camera::CameraPlugin;
 use npc::NpcPlugin;
 use world::WorldPlugin;
-
-#[derive(Component)]
-pub struct GameEntity<T> {
-    pub id: Uuid,
-    _marker: PhantomData<T>, // tells Rust that T is used
-}
-
-impl<T> GameEntity<T> {
-    pub fn new(id: Uuid) -> Self {
-        Self {
-            id,
-            _marker: PhantomData,
-        }
-    }
-}
+use ui::UiPlugin;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(get_window_config()))
-        .add_plugins((CameraPlugin, NpcPlugin, WorldPlugin))
+        .add_plugins((CameraPlugin, NpcPlugin, WorldPlugin, UiPlugin))
         .run();
 }
 
